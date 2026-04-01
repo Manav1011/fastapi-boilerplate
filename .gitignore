@@ -6,3 +6,4 @@ redis_ca.pem
 public_key.pem
 private_key.pem
 .vscode
+.venv/
