@@ -1,283 +1,279 @@
-# FastAPI Starter Pack
+# FastAPI Boilerplate
 
-FastAPI Starter Pack is a comprehensive boilerplate for building FastAPI applications. It uses UV for dependency management and Docker for containerization. Pre-commit hooks and deployment configurations are also included to streamline development.
+A production-ready FastAPI boilerplate with async everything, Django-like app structure, and a clean CLI.
 
-## Features
+## Tech Stack
 
-- **FastAPI**: Modern, fast (high-performance) web framework for building APIs with Python 3.12+.
-- **UV**: Fast Python package installer and resolver (Rust-based, 10-100x faster than pip).
-- **Pre-commit Hooks**: Pre-configured hooks for code quality and consistency.
-- **Mega Linter**: An advanced tool to ensure code quality across various languages and formats.
-- **Docker**: Multi-stage Dockerfiles for optimized production deployments.
+- **FastAPI** — async web framework
+- **Python 3.11+** — enforced via `.python-version`
+- **UV** — fast package manager (10-100x faster than pip)
+- **SQLAlchemy 2.0** — async ORM with `asyncpg`
+- **Alembic** — async migrations
+- **PostgreSQL** — database
+- **Redis** — rate limiting cache
+- **Typer** — CLI (Django management command style)
 
-## Getting Started
+---
 
-### 1.Clone the repository
-
-```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
-```
-
-### 2.Checkout to the Development Branch
+## Quick Start
 
 ```bash
-git checkout development
-```
+# 1. Start postgres & redis
+docker compose up -d
 
-## Prerequisites
-
-- **Python 3.12+** installed on your system
-- **UV** package manager ([Installation guide](https://docs.astral.sh/uv/getting-started/installation/))
-- **Docker** (optional, for containerized deployment)
-
-### Install UV
-
-If you don't have UV installed, install it using:
-
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-## Setup
-
-### 1. Install dependencies using UV
-
-```bash
-uv sync
-```
-
-This will create a virtual environment in `.venv` and install all dependencies.
-
-### 2. Activate the virtual environment
-
-```bash
-# macOS/Linux
-source .venv/bin/activate
-
-# Windows
-.venv\Scripts\activate
-```
-
-## Folder Structure
-
-```bash
-your-repo-name/
-├── src/
-│   ├── apps/
-│   │   ├── module_file/
-│   │   │   ├── controller/
-│   │   │   ├── schemas/
-│   │   │   ├── models/
-│   │   │   ├── services/
-│   ├── migrations/
-│   ├── main.py
-│   ├── ... (other directories and files)
-├── docker-compose-local.yml
-├── Dockerfile
-├── pyproject.toml
-├── env.example
-└── README.md
-
-```
-
-## configurations
-
-Configuration settings for the application should be defined in the `.env` file. Copy the `env.example` to `.env` and adjust the settings as needed.
-there will be a variable named DECRYPT_REQUEST_TIME_CHECK in env make it to 'True' if it's in production else keep it to 'False' in local or devlopment enviornoment
-
-There will be a variable named `DECRYPT_REQUEST_TIME_CHECK` in the `.env`. Set it to `'True'` if it's in production, else keep it `'False'` in local or development environment.
-
-This variable is used in the decrypt function.
-
-- If set to `True`, it will **seek a timestamp** from the encrypted payload and compare it with the current time. If the time difference is **within the limit defined by the `PAYLOAD_TIMEOUT`** variable in the `constants.py` file, it will return the token. Otherwise, it will raise an `InvalidPayload` error.
-
-```bash
-{
-  "email": "admin@gmail.com",
-  "password": "Admin@123",
-  "timestamp": "2025-07-09T12:12:08.913Z" #timestamp of the time when payload was created
-}
-```
-
-- If set to `False`, the function will **only extract email and password** from the encrypted payload, and if they are correct, it will return the access token without checking the timestamp.
-
-```bash
-{
-  "email": "admin@gmail.com",
-  "password": "Admin@123"
-}
-```
-
-## Local Development
-
-The Docker-compose.yml file can be used to run the postgresql and Pgadmin Service when needed
-
-```bash
-docker compose -f docker-compose-local.yml up
-```
-
-## Running the Project
-
-### Quick Start
-
-```bash
-# 1. Install dependencies
+# 2. Install dependencies
 uv sync
 
-# 2. Activate virtual environment
-source .venv/bin/activate  # macOS/Linux
-# or
-.venv\Scripts\activate     # Windows
+# 3. Run migrations
+uv run python main.py migrate
 
-# 3. Navigate to src directory
-cd src/
-
-# 4. Run database migrations
-python main.py migrate
-
-# 5. Start the application
-python main.py run
+# 4. Start server
+uv run python main.py run --debug
 ```
 
-### Detailed Steps
+App runs at `http://localhost:8080`. Docs at `http://localhost:8080/docs`.
 
-#### 1. Create database migrations (when models change)
+---
+
+## Project Structure
+
+```
+fastapi-boilerplate/
+├── main.py                     # CLI entry point (like Django's manage.py)
+├── pyproject.toml              # Dependencies & config
+├── docker-compose.yml          # Postgres + Redis
+├── .python-version             # Python 3.11
+│
+└── src/
+    ├── server.py               # FastAPI app factory (create_app)
+    ├── config.py               # Settings from .env
+    ├── lifespan.py              # Startup/shutdown events
+    ├── exceptions.py            # Global exception hierarchy
+    ├── handlers.py              # Exception handlers
+    ├── cli.py                   # All CLI commands
+    │
+    ├── apps/                    # Feature modules (like Django apps)
+    │   ├── user/
+    │   │   ├── models.py        # SQLAlchemy model
+    │   │   ├── repository.py    # Data access layer
+    │   │   ├── service.py       # Business logic
+    │   │   ├── request.py       # Pydantic request schemas
+    │   │   ├── response.py       # Pydantic response schemas
+    │   │   ├── exceptions.py     # App-specific exceptions
+    │   │   ├── urls.py          # Route handlers
+    │   │   └── __init__.py      # Exports router
+    │   │
+    │   ├── master/              # Same 8-file pattern
+    │   └── blog/                # Same 8-file pattern
+    │
+    ├── auth/                    # JWT, passwords, permissions
+    │   ├── jwt.py               # JWToken class, create_tokens
+    │   ├── permissions.py       # HasPermission, AdminHasPermission
+    │   ├── password.py          # hash_password, verify_password
+    │   └── role_types.py        # RoleType enum (USER, ADMIN, STAFF)
+    │
+    ├── db/                      # Database layer
+    │   ├── session.py           # Async engine, db_session (commits on success)
+    │   ├── base.py              # Base, TimeStampMixin, UUIDPrimaryKeyMixin
+    │   └── redis.py             # Redis client
+    │
+    ├── utils/                   # Shared utilities
+    │   ├── schema.py            # CamelCaseModel, BaseResponse
+    │   ├── validation.py         # validate_email, strong_password
+    │   ├── cookies.py            # set_auth_cookies, delete_cookies
+    │   ├── scheduler.py          # APScheduler (background jobs)
+    │   ├── http_client.py       # HTTPClient (httpx wrapper)
+    │   └── webhook.py            # Webhook helpers
+    │
+    ├── constants/               # Constants (messages, regex, config)
+    └── migrations/             # Alembic migrations
+```
+
+---
+
+## CLI Commands
 
 ```bash
-cd src/
-python main.py make-migrations
+uv run python main.py --help
+
+startapp        Create a new FastAPI app structure
+startapps       Create multiple apps at once
+makemigrations  Detect model changes & generate migration files
+showmigrations Show all migrations with applied/unapplied status
+migrate        Apply pending migrations
+rollback       Rollback the last migration
+run            Start the development server
 ```
 
-#### 2. Execute the seeder in the migration version file
+**Examples:**
+```bash
+uv run python main.py startapp blog        # creates src/apps/blog/
+uv run python main.py makemigrations        # generate migrations
+uv run python main.py migrate              # apply migrations
+uv run python main.py showmigrations      # check status
+uv run python main.py rollback             # undo last migration
+uv run python main.py run --debug         # dev server with hot reload
+uv run python main.py run --port 3000     # custom port
+```
 
-Add the seeder command in your migration file:
+---
+
+## Creating a New App
+
+```bash
+# 1. Generate the app structure
+uv run python main.py startapp blog
+
+# 2. Register the router in src/apps/__init__.py
+from apps.blog import blog_router
+__all__ = ["user_router", "master_router", "blog_router"]
+
+# 3. Add routes to the app in src/server.py
+base_router.include_router(blog_router)
+
+# 4. Create & apply migrations
+uv run python main.py makemigrations
+uv run python main.py migrate
+```
+
+---
+
+## App Structure (8-File Pattern)
+
+Each app follows the Django-like flat structure:
+
+| File | Purpose |
+|------|---------|
+| `models.py` | SQLAlchemy model with mixins |
+| `repository.py` | Data access — all DB queries |
+| `service.py` | Business logic — orchestrates repository |
+| `request.py` | Pydantic schemas for incoming requests |
+| `response.py` | Pydantic schemas for responses |
+| `exceptions.py` | Custom exceptions specific to this app |
+| `urls.py` | Route handlers (views) + router |
+| `__init__.py` | Exports the router |
+
+---
+
+## Import Patterns
+
+Like Django — **relative imports within the same app**, **absolute for cross-app and shared modules**:
 
 ```python
-op.create_index(op.f('****'), '****', ['*****'], unique=False)
-op.create_index(op.f('****'), '****', ['****'], unique=False)
-# ### end Alembic commands ###
-op.execute(sql_for_create_admin)
-# This command is used to create a default admin entry.
+# Within the same app (like Django's from .models import)
+from .models import UserModel
+from .service import UserService
+from .repository import UserRepository
+
+# From another app (like Django's from blog.models import)
+from apps.user.models import UserModel
+
+# Shared modules (always absolute)
+from auth.jwt import create_tokens
+from db.session import db_session
+from utils.schema import BaseResponse
 ```
 
-#### 3. Apply database migrations
+---
+
+## Async Everything
+
+The entire stack is async:
+
+- **Database**: `asyncpg` + SQLAlchemy async — `async_sessionmaker`, `AsyncSession`, `await session.scalar()`
+- **Repository**: All methods are `async def` with `await`
+- **Service**: All methods are `async def` with `await`
+- **Routes**: All handlers are `async def`
+- **CLI**: All commands are sync (CLI doesn't need async)
+
+---
+
+## Environment Variables
+
+Copy `env.example` to `.env` and configure:
 
 ```bash
-python main.py migrate
+ENV=Local
+APP_NAME=FastAPI-Starter-Pack
+APP_VERSION=0.0.1
+APP_HOST=0.0.0.0
+APP_PORT=8080
+APP_DEBUG=true
+
+JWT_SECRET_KEY=your-secret-key
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXP=3600
+REFRESH_TOKEN_EXP=86400
+COOKIES_DOMAIN=localhost
+
+DATABASE_USER=testuser
+DATABASE_PASSWORD=testpass
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=testdb
+DATABASE_URL=postgresql+asyncpg://testuser:testpass@localhost:5432/testdb
+
+REDIS_URL=redis://localhost:6379/0
+
+MASTER_ENUM_FILE_PATH=/tmp/enums.json
+SENTRY_SDK_DSN=https://example@sentry.io/123
 ```
 
-4. Run the Project
+---
+
+## API Routes
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/` | Root health check | No |
+| GET | `/healthcheck` | Health check | No |
+| GET | `/master/enums` | Get all enums | No |
+| POST | `/api/user/sign-in` | User login | No |
+| POST | `/api/user` | Create user | No |
+| GET | `/api/user/self` | Get current user | USER |
+| GET | `/api/user/` | Get user by ID | USER |
+| DELETE | `/api/user/` | Delete user | USER |
+
+---
+
+## Docker Services
 
 ```bash
-python main.py run --host=0.0.0.0 --port=8080 --debug
+# Start postgres and redis
+docker compose up -d
+
+# Check status
+docker compose ps
+
+# Stop services
+docker compose down
+
+# Stop and remove volumes (wipe data)
+docker compose down -v
 ```
 
-## API Usage Examples
+---
 
-### User Sign-In
-
-**Endpoint:** `/user/sign-in`  
-**Method:** `POST`
-
-**Request Body:**
-
-```json
-{
-  "encrypted_data": "...",
-  "encrypted_key": "...",
-  "iv": "..."
-}
-```
-
-**Response:**
-
-```json
-{
-  "status": "SUCCESS",
-  "code": 200,
-  "data": {
-    "access_token": "...",
-    "refresh_token": "..."
-  }
-}
-```
-
-### User Creation
-
-**Endpoint:** `/user/sign-up`  
-**Method:** `POST`
-
-**Request Body:**
-
-```json
-{
-  "encrypted_data": "...",
-  "encrypted_key": "...",
-  "iv": "..."
-}
-```
-
-**Response:**
-
-```json
-{
-  "status": "SUCCESS",
-  "code": 201,
-  "data": {
-    "id": "...",
-    "email": "...",
-    "first_name": "...",
-    "last_name": "...",
-    "phone": "..."
-  }
-}
-```
-
-> **Note:** All sensitive data (email, password, etc.) must be encrypted as per the encryption scheme described in the project.
-
-````
-
-## Code Quality Check
-
-### Pre-commit hooks
-
-This boilerplate includes several pre-commit hooks configured to ensure code quality and consistency. These hooks are defined in the pyproject.toml file under the [tool.pre-commit] section. The most commonly used hooks include:
-
-- black : Code formatter
-- ruff : Linter for Python code
-- interrogate : Static analysis tool
-
-### To install pre-commit hooks, run
+## Database Migrations
 
 ```bash
-pre-commit install
-````
+# Check for changes and generate migration
+uv run python main.py makemigrations
 
-### To run the hooks manually on all files, use
+# Apply all pending migrations
+uv run python main.py migrate
 
-```bash
-pre-commit run --all-files
+# Show migration status
+uv run python main.py showmigrations
+
+# Rollback last migration
+uv run python main.py rollback
 ```
 
-### Mega-linter
+---
 
-#### Mega-Linter is a tool for linting and formatting code. It supports many languages and formats. This boilerplate includes a basic configuration for Mega-Linter
+## Requirements
 
-### To run the Mega-Linters locally, use
-
-```bash
-npx mega-linter-runner
-```
-
-## Notes
-
-- Ensure that your Docker services are running if your application depends on PostgreSQL or any other services defined in your docker-compose-local.yml.
-- Adjust the python main.py run --host=0.0.0.0 --port=8080 --debug command to fit your project's entry point and configuration if needed.
-- This should provide a clear, step-by-step guide to setting up and running your FastAPI project using FastAPI Starter Pack.
-# fastapi-boilerplate
-# fastapi-boilerplate
+- Python 3.11+
+- UV (install: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- Docker (for postgres and redis)
