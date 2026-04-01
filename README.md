@@ -280,3 +280,4 @@ npx mega-linter-runner
 - Adjust the python main.py run --host=0.0.0.0 --port=8080 --debug command to fit your project's entry point and configuration if needed.
 - This should provide a clear, step-by-step guide to setting up and running your FastAPI project using FastAPI Starter Pack.
 # fastapi-boilerplate
+# fastapi-boilerplate
