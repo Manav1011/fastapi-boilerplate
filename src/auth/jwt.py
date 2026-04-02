@@ -16,7 +16,7 @@ class JWToken(SecurityBase):
     Does NOT handle cookie extraction - that moves to middleware.
     """
 
-    def __init__(self, token_type: Literal["access", "refresh"]) -> None:
+    def __init__(self, token_type: str) -> None:
         self.model = None  # No security scheme needed for direct use
         self.scheme_name = self.__class__.__name__
         self.token_type = token_type
@@ -49,6 +49,16 @@ class JWToken(SecurityBase):
             raise InvalidJWTTokenException(constants.INVALID_TOKEN)
         except ExpiredSignatureError:
             raise InvalidJWTTokenException(constants.EXPIRED_TOKEN)
+
+    async def __call__(self, *args, **kwargs):
+        """
+        Deprecated: JWToken is no longer callable as dependency.
+        Use CurrentUser dependency instead for protected routes.
+        """
+        raise NotImplementedError(
+            "JWToken dependency injection is deprecated. "
+            "Use CurrentUser dependency from auth.middleware instead."
+        )
 
 
 async def create_tokens(user_id: UUID) -> dict[str, str]:
