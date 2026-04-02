@@ -1,11 +1,19 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Optional
+import sys
 
 from dotenv import load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 load_dotenv(override=True)
+
+# Python 3.10 compatibility for StrEnum
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    class StrEnum(str, Enum):
+        pass
 
 
 class AppEnvironment(StrEnum):

@@ -1,4 +1,12 @@
-from enum import StrEnum
+from enum import Enum
+import sys
+
+# Python 3.10 compatibility for StrEnum
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    class StrEnum(str, Enum):
+        pass
 
 
 class RoleType(StrEnum):
