@@ -10,6 +10,8 @@ from .request import SignInRequest, SignUpRequest, GetUserByIdRequest, DeleteUse
 from .response import BaseUserResponse
 from .service import UserService
 from .repository import UserRepository
+from auth.middleware import CurrentUser
+from auth.schemas import RefreshRequest, TokenPair
 from auth.permissions import HasPermission
 from auth.role_types import RoleType
 from db.session import db_session
@@ -27,11 +29,50 @@ def get_user_service(session: db_session) -> UserService:
 async def sign_in(
     body: Annotated[SignInRequest, Body()],
     service: Annotated[UserService, Depends(get_user_service)],
-) -> JSONResponse:
-    res = await service.login_user(**body.model_dump())
-    data = {"status": constants.SUCCESS, "code": status.HTTP_200_OK, "data": res}
-    response = JSONResponse(content=data)
-    return set_auth_cookies(response, res, RoleType.USER)
+) -> TokenPair:
+    """
+    Login endpoint. Validates credentials and issues tokens.
+    Refresh token is stored in DB for rotation support.
+    """
+    tokens = await service.login_user(**body.model_dump())
+    # Store refresh token in DB
+    import hashlib
+    from datetime import datetime, timedelta
+    from config import settings
+
+    token_hash = hashlib.sha256(tokens["refresh_token"].encode()).hexdigest()
+    user = await service.repository.get_by_email(body.email)
+    await service.repository.create_refresh_token(
+        token_hash=token_hash,
+        user_id=user.id,
+        expires_at=datetime.utcnow() + timedelta(seconds=int(settings.REFRESH_TOKEN_EXP)),
+    )
+    await service.repository.session.commit()
+
+    return TokenPair(access_token=tokens["access_token"], refresh_token=tokens["refresh_token"])
+
+
+@router.post("/refresh", status_code=status.HTTP_200_OK, operation_id="refresh")
+async def refresh_token(
+    body: RefreshRequest,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> TokenPair:
+    """
+    Refresh endpoint. Validates refresh token, rotates pair.
+    Old refresh token is revoked, new access + refresh issued.
+    """
+    tokens = await service.refresh_user(body.refresh_token)
+    return TokenPair(access_token=tokens["access_token"], refresh_token=tokens["refresh_token"])
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK, operation_id="logout")
+async def logout(
+    body: RefreshRequest,
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> BaseResponse:
+    """Logout endpoint. Revokes the refresh token."""
+    await service.logout_user(body.refresh_token)
+    return BaseResponse(message="Logged out successfully")
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, operation_id="create_user")
@@ -44,23 +85,25 @@ async def create_user(
 
 @router.get("/self", status_code=status.HTTP_200_OK, operation_id="get_self")
 async def get_self(
-    user: Annotated[UserModel, Depends(HasPermission(RoleType.USER))],
+    user: Annotated[UserModel, Depends(CurrentUser())],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> BaseResponse[BaseUserResponse]:
     return BaseResponse(data=await service.get_self(user_id=user.id))
 
 
-@router.get("/", status_code=status.HTTP_200_OK, dependencies=[Depends(HasPermission(RoleType.USER))], operation_id="get_user_by_id")
+@router.get("/", status_code=status.HTTP_200_OK, operation_id="get_user_by_id")
 async def get_user_by_id(
     request: Annotated[GetUserByIdRequest, Query()],
+    user: Annotated[UserModel, Depends(CurrentUser())],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> BaseResponse[BaseUserResponse]:
     return BaseResponse(data=await service.get_user_by_id(**request.model_dump()))
 
 
-@router.delete("/", status_code=status.HTTP_200_OK, dependencies=[Depends(HasPermission(RoleType.USER))], operation_id="delete_user_by_id")
+@router.delete("/", status_code=status.HTTP_200_OK, operation_id="delete_user_by_id")
 async def delete_user_by_id(
     request: Annotated[DeleteUserByIdRequest, Query()],
+    user: Annotated[UserModel, Depends(CurrentUser())],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> BaseResponse[BaseUserResponse]:
     return BaseResponse(data=await service.delete_user_by_id(**request.model_dump()))
