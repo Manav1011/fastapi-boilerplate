@@ -1,10 +1,17 @@
 import uuid
-from typing import Self
-
+import sys
+from datetime import datetime
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base, TimeStampMixin, UUIDPrimaryKeyMixin
 from auth.role_types import RoleType
+
+# Python 3.10 compatibility for Self
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class UserModel(Base, UUIDPrimaryKeyMixin, TimeStampMixin):
@@ -42,3 +49,24 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimeStampMixin):
             password=password,
             role=role,
         )
+
+
+class RefreshTokenModel(Base, UUIDPrimaryKeyMixin, TimeStampMixin):
+    """
+    Model for refresh tokens stored in DB.
+    Token hash is stored (never plain text) for security.
+    """
+    __tablename__ = "refresh_tokens"
+
+    token_hash: Mapped[str] = mapped_column(index=True, unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    revoked: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+    @property
+    def is_expired(self) -> bool:
+        return datetime.utcnow() > self.expires_at
+
+    @property
+    def is_active(self) -> bool:
+        return not self.revoked and not self.is_expired
