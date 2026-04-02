@@ -8,6 +8,7 @@ from config import AppEnvironment, settings
 from handlers import start_exception_handlers
 from lifespan import lifespan
 from utils.schema import BaseValidationResponse
+from auth.middleware import AuthenticationMiddleware
 
 from apps.user import user_router
 
@@ -42,6 +43,7 @@ def init_middlewares(_app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    _app.add_middleware(AuthenticationMiddleware)
 
 
 def create_app(debug: bool = False) -> FastAPI:

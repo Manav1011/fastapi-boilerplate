@@ -85,14 +85,6 @@ class InvalidJWTTokenException(CustomException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
 
-class InvalidRoleException(NotFoundError):
-    """
-    Custom exception to show a generic error message.
-    """
-
-    message = constants.INVALID_ROLE
-
-
 class UnexpectedResponse(Exception):
     """
     Exception raised for an unexpected HTTP response.

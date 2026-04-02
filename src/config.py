@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import Enum
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 load_dotenv(override=True)
 
 
-class AppEnvironment(StrEnum):
+class AppEnvironment(str, Enum):
     """
     Enum representing different application environments.
 

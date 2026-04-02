@@ -32,13 +32,7 @@ ACCESS = "access"
 
 REFRESH = "refresh"
 
-ADMIN_ACCESS = "admin_access"
-
-ADMIN_REFRESH = "admin_refresh"
-
 USER_NOT_FOUND = "User not found"
-
-INVALID_ROLE = "Invalid role"
 
 DESCRIPTION = "Please provide a description."
 

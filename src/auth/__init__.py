@@ -1,11 +1,8 @@
-from auth.jwt import access, admin_access, admin_refresh, refresh
-from auth.permissions import AdminHasPermission, HasPermission
+from auth.jwt import access, refresh
+from auth.permissions import HasPermission
 
 __all__ = [
     "access",
     "refresh",
-    "admin_access",
-    "admin_refresh",
     "HasPermission",
-    "AdminHasPermission",
 ]

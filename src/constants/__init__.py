@@ -1,8 +1,6 @@
 from constants.config import PAYLOAD_TIMEOUT
 from constants.messages import (
     ACCESS,
-    ADMIN_ACCESS,
-    ADMIN_REFRESH,
     DESCRIPTION,
     DUPLICATE_EMAIL,
     EMAIL_FIELD_REQUIRED,
@@ -14,7 +12,6 @@ from constants.messages import (
     INVALID_ENCRYPTED_DATA,
     INVALID_PHONE_NUMBER,
     INVALID_REQUEST,
-    INVALID_ROLE,
     INVALID_TOKEN,
     PASSWORD_FIELD_REQUIRED,
     REFRESH,
@@ -48,10 +45,7 @@ __all__ = [
     "ERROR",
     "ACCESS",
     "REFRESH",
-    "ADMIN_ACCESS",
-    "ADMIN_REFRESH",
     "USER_NOT_FOUND",
-    "INVALID_ROLE",
     "DESCRIPTION",
     "INVALID_ENCRYPTED_DATA",
     "INVALID_EMAIL",
