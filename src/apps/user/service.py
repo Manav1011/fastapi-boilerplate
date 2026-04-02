@@ -54,7 +54,7 @@ class UserService:
             email=email,
         )
         self.repository.add(user)
-        await self.repository.session.commit()
+        await self.repository.session.flush()
         await self.repository.session.refresh(user)
         return user
 

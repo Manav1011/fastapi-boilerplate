@@ -249,18 +249,24 @@ def makemigrations(message: Optional[str] = None) -> None:
 
 @cli.command(help="Show migration status.")
 def showmigrations() -> None:
+    import asyncio
     from alembic.script import ScriptDirectory
+    from sqlalchemy import text
     from db.session import engine
 
     console.print(Panel.fit("[info]Migration Status[/info]"))
 
     script = ScriptDirectory.from_config(alembic_cfg)
 
-    # Get current revision from database using sync engine
-    sync_engine = engine.sync_engine
-    with sync_engine.connect() as conn:
-        result = conn.exec_driver_sql("SELECT version_num FROM alembic_version")
-        current = result.scalar()
+    async def _get_current() -> str | None:
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT version_num FROM alembic_version"))
+            return result.scalar()
+
+    try:
+        current = asyncio.run(_get_current())
+    except Exception:
+        current = None
     applied = {current} if current else set()
 
     all_migrations = list(script.walk_revisions())
