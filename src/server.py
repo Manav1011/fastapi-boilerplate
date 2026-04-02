@@ -8,7 +8,7 @@ from config import AppEnvironment, settings
 from handlers import start_exception_handlers
 from lifespan import lifespan
 from utils.schema import BaseValidationResponse
-from auth.middleware import AuthenticationMiddleware
+from auth.middleware import authentication_middleware
 
 from apps.user import user_router
 
@@ -35,6 +35,13 @@ def memory_usage_middleware(_app: FastAPI):
         return response
 
 
+def auth_middleware(_app: FastAPI):
+    @_app.middleware("http")
+    async def auth_middleware_inner(request: Request, call_next):
+        from auth.middleware import authentication_middleware
+        return await authentication_middleware(request, call_next)
+
+
 def init_middlewares(_app: FastAPI) -> None:
     _app.add_middleware(
         CORSMiddleware,
@@ -43,7 +50,6 @@ def init_middlewares(_app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    _app.add_middleware(AuthenticationMiddleware)
 
 
 def create_app(debug: bool = False) -> FastAPI:
@@ -70,6 +76,7 @@ def create_app(debug: bool = False) -> FastAPI:
     _app.include_router(base_router, responses={422: {"model": BaseValidationResponse}})
 
     init_middlewares(_app)
+    auth_middleware(_app)
     memory_usage_middleware(_app)
     start_exception_handlers(_app)
 

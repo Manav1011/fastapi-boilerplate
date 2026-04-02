@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
-from fastapi import Depends, Request
+from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.security.http import HTTPBearer
 
@@ -36,42 +36,37 @@ class CurrentUser:
         return user
 
 
-class AuthenticationMiddleware:
+async def authentication_middleware(request: Request, call_next):
     """
     Middleware that validates Bearer tokens and attaches user to request.state.
     Runs on every request - protected routes check request.state.user.
     """
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, request: Request, call_next):
-        # Skip auth for public endpoints
-        path = request.url.path
-        if path in ["/api/user/sign-in", "/api/user", "/docs", "/openapi.json", "/redoc"]:
-            return await call_next(request)
-
-        auth_header: Optional[HTTPAuthorizationCredentials] = await bearer_scheme(request)
-
-        if not auth_header:
-            # No Authorization header - try to process anyway (protected routes will reject)
-            return await call_next(request)
-
-        try:
-            payload = access.decode(auth_header.credentials)
-            user_id = UUID(payload["sub"])
-        except (UnauthorizedError, InvalidJWTTokenException, ValueError):
-            # Invalid token - let protected routes handle rejection
-            return await call_next(request)
-
-        # Load user from DB and attach to request.state
-        from apps.user.models import UserModel
-
-        async with db_session() as session:
-            user = await session.scalar(
-                select(UserModel).where(UserModel.id == user_id)
-            )
-            if user:
-                request.state.user = user
-
+    # Skip auth for public endpoints
+    path = request.url.path
+    if path in ["/api/user/sign-in", "/api/user", "/docs", "/openapi.json", "/redoc"]:
         return await call_next(request)
+
+    auth_header: Optional[HTTPAuthorizationCredentials] = await bearer_scheme(request)
+
+    if not auth_header:
+        # No Authorization header - try to process anyway (protected routes will reject)
+        return await call_next(request)
+
+    try:
+        payload = access.decode(auth_header.credentials)
+        user_id = UUID(payload["sub"])
+    except (UnauthorizedError, InvalidJWTTokenException, ValueError):
+        # Invalid token - let protected routes handle rejection
+        return await call_next(request)
+
+    # Load user from DB and attach to request.state
+    from apps.user.models import UserModel
+
+    async with db_session() as session:
+        user = await session.scalar(
+            select(UserModel).where(UserModel.id == user_id)
+        )
+        if user:
+            request.state.user = user
+
+    return await call_next(request)

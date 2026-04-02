@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Query, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import constants
 from .models import UserModel
@@ -20,7 +21,7 @@ from config import settings
 router = APIRouter(prefix="/api/user", tags=["User"])
 
 
-def get_user_service(session: db_session) -> UserService:
+def get_user_service(session: Annotated[AsyncSession, Depends(db_session)]) -> UserService:
     return UserService(UserRepository(session))
 
 
